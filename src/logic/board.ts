@@ -65,10 +65,10 @@ function floodOpen(board: Board, cells: Cell[], start: number): number | null {
 
 export function openCell(board: Board, index: number): Board {
   if (board.exploded !== null || index < 0 || index >= board.cells.length) return board;
+  if (board.cells[index]!.flag) return board;
   let b = board;
   if (!b.generated) b = generate(b, index);
-  const target = b.cells[index]!;
-  if (target.open || target.flag) return b === board ? board : b;
+  if (b.cells[index]!.open) return b === board ? board : b;
   const cells = b.cells.slice();
   const hit = floodOpen(b, cells, index);
   return { ...b, cells, exploded: hit };

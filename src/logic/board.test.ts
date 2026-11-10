@@ -143,6 +143,22 @@ describe('flood fill', () => {
   });
 });
 
+describe('hex flood fill', () => {
+  it('opens a connected zero region and its numbered border, leaves mines closed', () => {
+    let b = createBoard('hex', 9, 9, 6, 11);
+    b = openCell(b, 4 * 9 + 4);
+    expect(b.exploded).toBeNull();
+    const open = b.cells.filter((c) => c.open).length;
+    expect(open).toBeGreaterThan(7); // more than the clicked cell and its ring
+    b.cells.forEach((c, i) => {
+      if (c.mine) expect(c.open).toBe(false);
+      if (c.open && c.adjacent === 0) {
+        for (const n of neighbours('hex', 9, 9, i)) expect(b.cells[n]!.open).toBe(true);
+      }
+    });
+  });
+});
+
 describe('open / flag', () => {
   it('opening a mine explodes and freezes the board', () => {
     const b = openCell(manual(['*..', '...', '...']), 0);
@@ -157,6 +173,13 @@ describe('open / flag', () => {
     expect(toggleFlag(b, 0).cells[0]!.flag).toBe(false);
     b = openCell(manual(['*..', '...', '...']), 8);
     expect(toggleFlag(b, 8)).toBe(b);
+  });
+  it('opening a flagged cell on a fresh board does not generate it', () => {
+    let b = createBoard('square', 9, 9, 10, 3);
+    b = toggleFlag(b, 40);
+    const r = openCell(b, 40);
+    expect(r).toBe(b);
+    expect(r.generated).toBe(false);
   });
   it('is pure: input board is not mutated', () => {
     const b = createBoard('square', 9, 9, 10, 3);
@@ -183,6 +206,12 @@ describe('chord', () => {
     b = toggleFlag(b, 1);
     b = chord(b, 4);
     expect(b.exploded).toBe(0);
+  });
+  it('does nothing with 1 flag against a number of 2', () => {
+    let b = openCell(manual(['*.*', '...', '...']), 4);
+    expect(b.cells[4]!.adjacent).toBe(2);
+    b = toggleFlag(b, 0);
+    expect(chord(b, 4)).toBe(b);
   });
   it('does nothing when the flag count differs, or on closed / zero cells', () => {
     const b = openCell(manual(layout), 4);
