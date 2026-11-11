@@ -68,7 +68,8 @@ export function isMinesweeperSession(v: unknown): v is MinesweeperSession {
     if (!isRec(t) || !isNonNegInt(t.solved)) return false;
     if (typeof t.remainingMs !== 'number' || !Number.isFinite(t.remainingMs)) return false;
     if (t.remainingMs <= 0 || t.remainingMs > TIME_ATTACK_MS) return false;
-    return true;
+    // A mine hit swaps the board at once, so a live time attack never holds an exploded board.
+    return v.board.exploded === null;
   }
   return v.timeAttack === undefined;
 }

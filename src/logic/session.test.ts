@@ -59,4 +59,13 @@ describe('session', () => {
     delete ta.timeAttack;
     expect(isMinesweeperSession(ta)).toBe(false);
   });
+  it('rejects a time attack save whose board exploded (the state never holds one)', () => {
+    let ta = taOpen(startTimeAttack(8), 40);
+    const mine = ta.board.cells.findIndex((c) => c.mine);
+    const exploded = openCell(ta.board, mine);
+    expect(exploded.exploded).toBe(mine);
+    ta = { ...ta, board: exploded };
+    const saved = roundTrip(toSession({ kind: 'timeAttack', level: 'beginner' }, exploded, 12, ta));
+    expect(isMinesweeperSession(saved)).toBe(false);
+  });
 });

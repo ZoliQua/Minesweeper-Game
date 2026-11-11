@@ -1,0 +1,145 @@
+.game {
+  max-width: 1180px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  gap: 18px;
+  align-items: start;
+  justify-content: center;
+}
+
+.boardWrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+}
+
+.boardInner {
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Time attack: a mine hit flashes the frame (shape: a thick dashed outline, not only a colour). */
+.boardWrap[data-flash='mine'] {
+  outline: 3px dashed var(--danger);
+  outline-offset: -3px;
+  animation: msFlash 0.45s ease-out 2;
+}
+
+.boardWrap[data-flash='solved'] {
+  outline: 3px solid var(--ok);
+  outline-offset: -3px;
+}
+
+@keyframes msFlash {
+  0% {
+    background: color-mix(in srgb, var(--danger) 28%, transparent);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.toast {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  box-shadow: var(--shadow-sm);
+  animation: msToast 1.2s ease-out forwards;
+}
+
+.toastMine {
+  background: var(--danger);
+  color: #fff;
+}
+
+.toastSolved {
+  background: var(--ok);
+  color: #0f1016;
+}
+
+@keyframes msToast {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boardWrap[data-flash='mine'],
+  .toast {
+    animation: none;
+  }
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.buttons > * {
+  flex: 1;
+}
+
+.save {
+  margin-top: 10px;
+  min-height: 16px;
+}
+
+.settings {
+  display: grid;
+  gap: 12px;
+}
+
+.settings .dentalRow {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  cursor: pointer;
+}
+
+.note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-mute);
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .boardWrap {
+    padding: 6px;
+  }
+}
