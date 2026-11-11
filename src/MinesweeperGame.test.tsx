@@ -2,11 +2,11 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadSession } from './arcade';
 import { MinesweeperGame, RESULT_DELAY_MS } from './MinesweeperGame';
-import { createBoard, neighbours, openCell } from './logic/board';
+import { neighbours, openCell } from './logic/board';
 import { randomSeed } from './logic/seed';
 import type { MinesweeperSession } from './logic/session';
 import { startTimeAttack } from './logic/timeAttack';
-import type { Board } from './logic/types';
+import { beginner, cell, key, mineCells, openCount, safeCells, stateOf } from './test/minefield';
 
 beforeEach(() => {
   localStorage.clear();
@@ -19,19 +19,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const key = (k: string) => fireEvent.keyDown(window, { key: k });
-const cell = (c: HTMLElement, i: number) => {
-  const el = c.querySelector(`[data-i="${i}"]`);
-  if (!el) throw new Error(`no cell ${i}`);
-  return el;
-};
-const stateOf = (c: HTMLElement, i: number) => cell(c, i).getAttribute('data-state');
-const openCount = (c: HTMLElement) => c.querySelectorAll('[data-state="open"]').length;
 const board = () => screen.getByRole('group', { name: /Minefield/ });
-/** The beginner minefield the game builds after a first click on the centre. */
-const beginner = (first = 40): Board => openCell(createBoard('square', 9, 9, 10, randomSeed()), first);
-const safeCells = (b: Board) => b.cells.flatMap((c, i) => (c.mine ? [] : [i]));
-const mineCells = (b: Board) => b.cells.flatMap((c, i) => (c.mine ? [i] : []));
 
 function start(props: Parameters<typeof MinesweeperGame>[0] = {}) {
   const view = render(<MinesweeperGame {...props} />);
@@ -286,5 +274,45 @@ describe('<MinesweeperGame />', () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it('a fast second click on a different cell still opens it (only a same-cell double-click is skipped)', () => {
+    const { container } = start();
+    act(() => fireEvent.click(cell(container, 40)));
+    const b = beginner();
+    const [a, c] = safeCells(b).filter((i) => !b.cells[i]!.open);
+    act(() => fireEvent.click(cell(container, a!), { detail: 1 }));
+    act(() => fireEvent.click(cell(container, c!), { detail: 2 }));
+    expect(stateOf(container, a!)).not.toBe('hidden');
+    expect(stateOf(container, c!)).not.toBe('hidden');
+  });
+
+  it('Space and Enter on a focused button belong to the button, not to the board', () => {
+    const { container } = render(<MinesweeperGame />);
+    act(() => fireEvent.keyDown(screen.getByRole('button', { name: 'Hexagonal' }), { key: ' ' }));
+    expect(screen.getByRole('dialog', { name: 'Minesweeper' })).toBeTruthy();
+    act(() => key(' '));
+    for (let i = 0; i < 4; i += 1) act(() => key('ArrowUp'));
+    act(() => fireEvent.keyDown(screen.getByRole('button', { name: 'Pause' }), { key: 'Enter' }));
+    act(() => fireEvent.keyDown(screen.getByRole('button', { name: 'Pause' }), { key: ' ' }));
+    expect(stateOf(container, 4)).toBe('hidden');
+    act(() => key(' '));
+    expect(stateOf(container, 4)).toBe('open');
+  });
+
+  it('does not autosave a classic board before the first open', () => {
+    const view = start();
+    act(() => vi.advanceTimersByTime(2500));
+    view.unmount();
+    expect(loadSession<MinesweeperSession>('minesweeper', 1)).toBeNull();
+  });
+
+  it('remembers the classic level when coming back from time attack', () => {
+    render(<MinesweeperGame />);
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Expert' })));
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Time attack' })));
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Hexagonal' })));
+    expect(screen.getByRole('button', { name: 'Expert' }).getAttribute('aria-pressed')).toBe('true');
+    expect(board().getAttribute('data-cols')).toBe('24');
   });
 });

@@ -13,6 +13,7 @@ import {
   shouldIgnoreKey,
   StatPanel,
   useArcadeRun,
+  useDental,
   useKitMessages,
   useLang,
   useMessages,
@@ -26,12 +27,13 @@ import {
   type RunOutcome,
 } from './arcade';
 import { Board } from './components/Board';
+import { DentalToggle } from './components/DentalToggle';
 import type { CellView } from './components/cellView';
 import { ModeSelect } from './components/ModeSelect';
 import { KIND_KEY, LEVEL_KEY, MESSAGES, type MessageKey } from './i18n';
 import { chord, createBoard, isSolved, openCell, toggleFlag } from './logic/board';
 import { moveFocus, type Direction } from './logic/focus';
-import { displayDims, LEVELS, MODE_KINDS, modeDims, modeTopology, type ModeSelection } from './logic/modes';
+import { displayDims, LEVELS, MODE_KINDS, modeDims, modeTopology, type Level, type ModeSelection } from './logic/modes';
 import { classicScore } from './logic/scoring';
 import { randomSeed } from './logic/seed';
 import { isMinesweeperSession, restoreTimeAttack, SESSION_SCHEMA, toSession, type MinesweeperSession } from './logic/session';
@@ -59,6 +61,7 @@ export const RESULT_DELAY_MS = 900;
 export const FEEDBACK_MS = 1200;
 const TA_TICK_MS = 100;
 const MODE_PREF = 'minesweeper.mode';
+const LEVEL_PREF = 'minesweeper.level';
 const DEFAULT_MODE: ModeSelection = { kind: 'classic', level: 'beginner' };
 const PORTRAIT_QUERY = '(orientation: portrait) and (max-width: 700px)';
 
@@ -101,6 +104,18 @@ const readModePref = (): ModeSelection => {
   const v = readJSON<unknown>(MODE_PREF, null);
   return isModeSelection(v) ? v : DEFAULT_MODE;
 };
+
+const readLevelPref = (): Level => {
+  const v = readJSON<unknown>(LEVEL_PREF, null);
+  return LEVELS.includes(v as never) ? (v as Level) : 'beginner';
+};
+
+/** Elements that answer Space / Enter themselves; the global hotkeys leave them alone. */
+function handlesActivationKeys(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el || typeof el.tagName !== 'string') return false;
+  return el.tagName === 'BUTTON' || el.tagName === 'SUMMARY' || (el.tagName === 'A' && el.hasAttribute('href'));
+}
 
 function freshPlay(mode: ModeSelection): Play {
   if (mode.kind === 'timeAttack') return startTimeAttack(randomSeed());
@@ -150,7 +165,7 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
   const t = useMessages(MESSAGES);
   const k = useKitMessages();
   const [lang] = useLang();
-  const dental = false; // classic look only for now
+  const [dental] = useDental();
   const portrait = usePortrait();
 
   const restoredEnv = useRestoredSession<MinesweeperSession>(GAME, SESSION_SCHEMA, isMinesweeperSession);
@@ -167,6 +182,10 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
   const restored = init.restored;
 
   const [mode, setMode] = useState<ModeSelection>(init.mode);
+  // Time attack is always beginner; coming back to Classic / Hexagonal restores this level.
+  const [lastLevel, setLastLevel] = useState<Level>(() =>
+    init.mode.kind !== 'timeAttack' ? init.mode.level : readLevelPref(),
+  );
   const [play, setPlay] = useState<Play>(init.play);
   const [phase, setPhase] = useState<Phase>(restored ? 'paused' : 'idle');
   const [welcomeBack, setWelcomeBack] = useState(restored !== null);
@@ -218,8 +237,10 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
   const savedAt = useSessionAutosave({
     gameId: GAME,
     schema: SESSION_SCHEMA,
-    enabled: phase === 'live' || phase === 'paused',
-    discard: phase === 'idle' || phase === 'over',
+    // A classic / hex board is worth saving only after its first open (mines are placed then);
+    // a fresh run also drops the previous run's save.
+    enabled: (phase === 'live' || phase === 'paused') && (isTA || board.generated),
+    discard: phase === 'idle' || phase === 'over' || (!isTA && !board.generated),
     data: sessionData,
     seconds,
     score: liveScore,
@@ -252,6 +273,10 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
     (m: ModeSelection) => {
       setMode(m);
       writeJSON(MODE_PREF, m);
+      if (m.kind !== 'timeAttack') {
+        setLastLevel(m.level);
+        writeJSON(LEVEL_PREF, m.level);
+      }
       // A level switch mid-session keeps playing; time attack waits for Start (its clock is ticking).
       const live = (phase === 'live' || phase === 'paused') && m.kind !== 'timeAttack';
       resetTo(m, live ? 'live' : 'idle');
@@ -397,6 +422,8 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
         return;
       }
       if (e.key === ' ' || e.key === 'Enter') {
+        // A focused button, link or summary handles these keys itself (keyboard users activate it).
+        if (handlesActivationKeys(e.target)) return;
         e.preventDefault();
         if (a.interactive) setShowFocus(true);
         a.primary();
@@ -598,8 +625,15 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
 
           <section className="arc-panel">
             <h2 className="arc-panel__title">{t('panelMode')}</h2>
-            <ModeSelect mode={mode} onChange={changeMode} />
+            <ModeSelect mode={mode} lastLevel={lastLevel} onChange={changeMode} />
             <p className={styles.note}>{modeNote}</p>
+          </section>
+
+          <section className="arc-panel">
+            <h2 className="arc-panel__title">{t('panelSettings')}</h2>
+            <div className={styles.settings}>
+              <DentalToggle className={styles.dentalRow} />
+            </div>
           </section>
 
           <section className="arc-panel">

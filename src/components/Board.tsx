@@ -180,6 +180,8 @@ function BoardView({
   const press = useRef<{ i: number; timer: number | null; fired: boolean; touch: boolean } | null>(null);
   /** Whether the cell was already open at the first click of a double-click. */
   const openAtFirstClick = useRef<{ i: number; open: boolean } | null>(null);
+  /** Cell of the previous click: a click counter above 1 only means a double-click on that same cell. */
+  const lastClick = useRef<number | null>(null);
   const mini = variant === 'mini';
   const cellId = (i: number) => `${uid}-cell-${i}`;
 
@@ -222,7 +224,10 @@ function BoardView({
             return;
           }
           if (i === null) return;
-          if (e.detail >= 2) return; // the double-click handler decides
+          // Second click of a double-click on the same cell: the double-click handler decides.
+          // A fast click on another cell (some browsers still count it) is a normal click.
+          if (e.detail >= 2 && lastClick.current === i) return;
+          lastClick.current = i;
           openAtFirstClick.current = { i, open: board.cells[i]?.open ?? false };
           onOpen?.(i);
         },
