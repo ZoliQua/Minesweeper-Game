@@ -91,7 +91,7 @@ describe('Minesweeper rules dialog', () => {
       `Időre: megoldott táblánként ${hu(POINTS_PER_BOARD)} pont, legfeljebb ${hu(MAX_SCORE)} pont ` +
         `(${hu(MAX_SCORE / POINTS_PER_BOARD)} tábla). Ha idő előtt befejezed, az addig gyűjtött pontjaid kerülnek a ranglistára.`,
     );
-    expect(text).toContain('Aknára lépve 0 pontot kapsz, és ennyit ér az idő előtt befejezett klasszikus vagy hatszögletű tábla is.');
+    expect(text).toContain('Klasszikus és hatszögletű táblán az aknára lépés 0 pontot ér, és ennyit ér az idő előtti befejezés is.');
     expect(text).toContain(
       `Időre: ${hu(TIME_ATTACK_MS / 60_000)} percen át kezdő táblák. Egy megoldott tábla után jön a következő; ` +
         `egy akna ${hu(MINE_PENALTY_MS / 1000)} másodpercbe kerül, és új táblát hoz.`,

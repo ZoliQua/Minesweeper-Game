@@ -42,7 +42,8 @@
 }
 
 /*
- * Board size comes from its frame: as wide as the frame allows (at most 40 px per cell) and short
+ * Board size comes from its frame (--ms-frame-h is measured by the game: the screen height left below the
+ * frame when nothing is scrolled; the values here are only the first-paint fallback): as wide as the frame allows (at most 40 px per cell) and short
  * enough to fit the visible height. On touch screens a cell never gets smaller than 32 px; a board
  * that is then bigger than its frame pans inside the frame (overflow), never the page.
  */
@@ -210,5 +211,34 @@
     padding: 6px;
     --ms-frame-h: max(240px, calc(100vh - 200px));
     --ms-frame-h: max(240px, calc(100dvh - 200px));
+  }
+}
+
+/* Short landscape screens: the Flag toggle stands beside the frame instead of above it, and the subtitle goes,
+   so the frame gets the height. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .boardCol {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .boardCol > .boardWrap {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .boardBar {
+    order: 2;
+    flex-direction: column;
+  }
+
+  .flagToggle {
+    flex-direction: column;
+    min-width: 64px;
+    padding: 8px 6px;
+  }
+
+  .game :global(.arc-game__sub) {
+    display: none;
   }
 }

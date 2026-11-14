@@ -20,8 +20,10 @@ All notable changes to this project are documented here. The format follows
   visible **Flag** / „Zászló” / „Fahne” toggle above the board makes a tap flag and a long press open. Touch help in the
   Controls panel.
 - Full screen (kit `FullscreenButton` / `useImmersive`); in the CSS full-screen mode Escape may pause but never resumes.
-- The board sizes itself from its frame (at most 40 px per cell, short enough for the visible height); on touch screens a cell
-  stays at least 32 px wide and a bigger board pans inside its frame, never the page.
+- The board sizes itself from its frame (at most 40 px per cell); the frame takes the screen height left below it when nothing
+  is scrolled (page, portal or full screen), so the Flag toggle and the whole frame are on screen together. On touch screens a
+  cell stays at least 32 px wide and a bigger board pans inside its frame, never the page. On short landscape screens the Flag
+  toggle stands beside the frame.
 - `README.de.md` and `README.hu.md`: full German and Hungarian translations; the family table lists Snapszer.
 
 ### Changed

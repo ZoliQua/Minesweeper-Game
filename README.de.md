@@ -66,7 +66,7 @@ Jedes Spiel ist ein eigenständiges Repository, das sich auch in das Portal einf
 - 💥 **Ehrliches Ende**: Eine Niederlage zeigt alle Minen und streicht falsche Flaggen durch; ein Sieg markiert die übrigen Minen
 - ⏱️ **Rückmeldung gegen die Uhr**: Eine Mine lässt den Rahmen blinken und zeigt **−15 s**, ein geräumtes Spielfeld zeigt **+150**, und sofort folgt ein neues
 - 👁️ **Farbenblind-freundlich**: Zahlen sind Ziffern, verdeckte Felder haben eine erhabene Innenkante, die geöffnete Mine einen Stern, falsche Flaggen ein Kreuz; Farbe ist nie das einzige Merkmal
-- 📱 **Handytauglich**: Tippen öffnet, langes Drücken setzt eine Flagge, und die **Fahne**-Taste schaltet das Tippen auf Flaggen um;
+- 📱 **Handytauglich**: Tippen öffnet, langes Drücken setzt eine Flagge, und die Taste **„Fahne“** schaltet das Tippen auf Flaggen um;
   das Spielfeld richtet seine Größe nach seinem Rahmen, und ein Spielfeld, das größer als der Bildschirm ist, wird innerhalb dieses
   Rahmens verschoben, nie die Seite; die Experten-Spielfelder (quadratisch und sechseckig) stellen sich auf einem Handy im Hochformat hochkant (16×30, 14×24)
 - 📖 **Regeln**-Taste: Ziel (mit einer Abbildung eines Zahlenfelds), so spielst du, die Regeln, die Wertung mit allen Zahlen, der Zahnmodus und auf dem Handy die Touch-Steuerung
@@ -116,7 +116,7 @@ Produktions-Build: `npm run build && npm run preview`. Der Build verwendet relat
 | --- | --- |
 | 🖱️ Klick / Tippen | Feld öffnen; auf einer Zahl, um die alle Flaggen stehen: die übrigen Nachbarn öffnen (Akkord) |
 | 🖱️ Rechtsklick / langes Drücken (400 ms) | Flagge setzen / entfernen |
-| 🚩 **Fahne**-Taste | Solange sie an ist, setzt Klick / Tippen eine Flagge und langes Drücken öffnet |
+| 🚩 Taste **„Fahne“** | Solange sie an ist, setzt Klick / Tippen eine Flagge und langes Drücken öffnet |
 | 🖱️ Doppelklick auf eine Zahl | Akkord |
 | **← → ↑ ↓** | Fokusring bewegen (folgt dem Bildschirm, wenn das Spielfeld gedreht ist) |
 | **Leertaste** / **Enter** | Fokussiertes Feld öffnen (oder Akkord) · Start · Weiter · Nochmal spielen |
@@ -131,7 +131,7 @@ sich der **Regeln**-Dialog nur über seine Taste.
 ### 📱 Auf dem Handy
 
 Tippe ein Feld an, um es zu öffnen, und halte es einen Moment (400 ms) gedrückt, um eine Flagge zu setzen oder zu entfernen; ein Finger,
-der zu ziehen beginnt, verschiebt das Spielfeld und setzt daher weder eine Flagge noch öffnet er ein Feld. Die **Fahne**-Taste über dem
+der zu ziehen beginnt, verschiebt das Spielfeld und setzt daher weder eine Flagge noch öffnet er ein Feld. Die Taste **„Fahne“** über dem
 Spielfeld vertauscht beides: Solange sie an ist, setzt Tippen eine Flagge und langes Drücken öffnet. Ein Tippen auf eine Zahl, um die alle
 Flaggen stehen, öffnet die übrigen Felder ringsum. Auf einem Touchscreen bleibt ein Feld mindestens 32 px breit; ein Spielfeld, das dadurch
 größer als sein Rahmen wird, verschiebst du innerhalb des Rahmens, während die Seite stehen bleibt. **Vollbild** im Spiel-Bereich blendet

@@ -2,7 +2,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyDental, applyLang } from './arcade';
 import { MinesweeperGame } from './MinesweeperGame';
-import { neighbours } from './logic/board';
+import { createBoard, neighbours, openCell } from './logic/board';
+import { randomSeed } from './logic/seed';
 import { beginner, cell, key, mineCells, safeCells, stateOf } from './test/minefield';
 import { setCoarsePointer } from './test/touchEnv';
 
@@ -156,6 +157,49 @@ describe('Minesweeper touch controls', () => {
     hold(cell(container, mine), 420);
     expect(stateOf(container, mine)).toBe('flag');
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('hexagonal boards: a tap opens, a long press flags', () => {
+    const { container } = render(<MinesweeperGame />);
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Hexagonal' })));
+    act(() => key(' '));
+    tap(cell(container, 40));
+    expect(stateOf(container, 40)).toBe('open');
+    const hex = openCell(createBoard('hex', 9, 9, 10, randomSeed()), 40);
+    const hidden = hex.cells.findIndex((c) => !c.open);
+    hold(cell(container, hidden), 420);
+    expect(stateOf(container, hidden)).toBe('flag');
+    expect(container.querySelector('svg[data-topology]')!.getAttribute('data-topology')).toBe('hex');
+  });
+
+  it('the frame takes the height left below it when the page is not scrolled, and follows resizes', () => {
+    const rect = (top: number) => ({ top, bottom: top + 10, left: 0, right: 10, width: 10, height: 10, x: 0, y: top, toJSON: () => ({}) });
+    const spy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      return rect(this.dataset.testid === 'ms-frame' ? 300 : 0) as DOMRect;
+    });
+    window.innerHeight = 844;
+    render(<MinesweeperGame />);
+    const wrap = screen.getByTestId('ms-frame').parentElement!;
+    // 844 − 300 − a 12 px bottom gap
+    expect(wrap.style.getPropertyValue('--ms-frame-h')).toBe('532px');
+    // A page scrolled by 200 px does not change the answer: the frame's resting place counts.
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 200 });
+    spy.mockImplementation(function (this: HTMLElement) {
+      return rect(this.dataset.testid === 'ms-frame' ? 100 : 0) as DOMRect;
+    });
+    window.innerHeight = 664;
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+    expect(wrap.style.getPropertyValue('--ms-frame-h')).toBe('352px');
+    // Never below the minimum on a very short screen.
+    window.innerHeight = 380;
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+    expect(wrap.style.getPropertyValue('--ms-frame-h')).toBe('160px');
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
+    window.innerHeight = 768;
   });
 
   it('shows touch help next to the (hidden) key help', () => {

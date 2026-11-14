@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   ARCADE_KEYS,
   clearSession,
@@ -70,6 +70,9 @@ const TA_TICK_MS = 100;
 const MODE_PREF = 'minesweeper.mode';
 const LEVEL_PREF = 'minesweeper.level';
 const DEFAULT_MODE: ModeSelection = { kind: 'classic', level: 'beginner' };
+/** The board frame never gets shorter than this, and keeps this gap to the bottom of the screen. */
+export const FRAME_MIN_PX = 160;
+export const FRAME_GAP_PX = 12;
 const PORTRAIT_QUERY = '(orientation: portrait) and (max-width: 700px)';
 
 /**
@@ -214,6 +217,8 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
   const [finishOpen, setFinishOpen] = useState(false);
   // Flag mode (the visible toggle for touch screens): a tap flags, a long press opens.
   const [flagMode, setFlagMode] = useState(false);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [frameH, setFrameH] = useState<number | null>(null);
 
   const isTA = mode.kind === 'timeAttack';
   const dims = modeDims(mode);
@@ -490,6 +495,35 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
   const onChord = useCallback((i: number) => api.current.act(i, 'chord'), []);
   const onPointer = useCallback(() => setShowFocus(false), []);
 
+  // The frame takes the height that is left below it on the screen when nothing is scrolled (page, portal or
+  // the full-screen root), so the Flag toggle, the frame and its bottom edge are all visible together; a board
+  // that is still bigger pans inside the frame.
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = frameRef.current;
+      if (!el) return;
+      let top = el.getBoundingClientRect().top + (window.scrollY || 0);
+      for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
+        top += p.scrollTop;
+      }
+      const vh = window.visualViewport?.height ?? window.innerHeight;
+      const h = Math.max(FRAME_MIN_PX, Math.floor(vh - top - FRAME_GAP_PX));
+      setFrameH((prev) => (prev === h ? prev : h));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('resize', measure);
+    // Text above the frame can wrap differently (language, width): follow the root's size too.
+    const root = rootRef.current;
+    const ro = root && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    if (root) ro?.observe(root);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.visualViewport?.removeEventListener('resize', measure);
+      ro?.disconnect();
+    };
+  }, [immersive.active, embedded]);
+
   // ── View ───────────────────────────────────────────────────
   const num = (n: number) => formatNumber(n, lang);
   const describe = useCallback(
@@ -645,8 +679,12 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
               </span>
             </button>
           </div>
-          <div className={`arc-game__board ${styles.boardWrap}`} data-flash={feedback?.kind}>
-            <div className={`arc-board-tap ${styles.frame}`} data-testid="ms-frame">
+          <div
+            className={`arc-game__board ${styles.boardWrap}`}
+            data-flash={feedback?.kind}
+            style={frameH === null ? undefined : ({ '--ms-frame-h': `${frameH}px` } as CSSProperties)}
+          >
+            <div ref={frameRef} className={`arc-board-tap ${styles.frame}`} data-testid="ms-frame">
               <div
                 className={styles.boardInner}
                 style={{ '--ms-cells': fmt(size.width / CELL_UNITS), '--ms-aspect': fmt(size.width / size.height) } as CSSProperties}
