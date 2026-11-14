@@ -1,10 +1,12 @@
 # 💣 Minesweeper
 
+**English** · [Deutsch](README.de.md) · [Magyar](README.hu.md)
+
 A type-safe Minesweeper built with **React 18**, **Vite** and **TypeScript**: open the field, flag the mines, never guess more
 than you must. Three ways to play: **Classic** square boards, **Hexagonal** cells with six neighbours, and **Time attack**
 (as many beginner boards as you can clear in three minutes). The first click is always safe, numbers are drawn as digits
 (colour is only a bonus) and the boards are seeded, so the engine is fully testable.
-Runs on its own **and** as one of the fourteen games of **[Zoltan's Arcade](https://github.com/ZoliQua/Arcade-Game-Center)**:
+Runs on its own **and** as one of the fifteen games of **[Zoltan's Arcade](https://github.com/ZoliQua/Arcade-Game-Center)**:
 play it at [dulzoltan.hu/arcade/#/play/minesweeper](https://dulzoltan.hu/arcade/#/play/minesweeper).
 
 [![CI](https://github.com/ZoliQua/Minesweeper-Game/actions/workflows/ci.yml/badge.svg)](https://github.com/ZoliQua/Minesweeper-Game/actions/workflows/ci.yml)
@@ -52,6 +54,7 @@ Every game is a standalone repo that also plugs into the portal. They share one 
 | 💣 **Minesweeper** (this repo) | [Minesweeper-Game](https://github.com/ZoliQua/Minesweeper-Game) | Logic |
 | ♠️ Solitaire | [Solitaire-Game](https://github.com/ZoliQua/Solitaire-Game) | Cards |
 | 🎴 Ulti | [Ulti-Game](https://github.com/ZoliQua/Ulti-Game) | Cards |
+| 🂡 Snapszer | [Snapszer-Game](https://github.com/ZoliQua/Snapszer-Game) | Cards |
 
 ## ✨ Features
 
@@ -59,11 +62,16 @@ Every game is a standalone repo that also plugs into the portal. They share one 
   24×14 / 80) and Time attack (3 minutes of beginner boards)
 - ⬡ **Real hex boards**: odd-r offset rows drawn as SVG polygons, six neighbours, flood fill and chording on hexes too
 - 🛟 **Safe first click**: mines are placed after the first open, never on the clicked cell or its neighbours, so it always opens an area
-- 🚩 **Flags and chords**: right-click, long-press (500 ms) or **F** flags; a click (or double-click) on a number whose flags are all placed opens its other neighbours
+- 🚩 **Flags and chords**: right-click, long-press (400 ms) or **F** flags; a click (or double-click) on a number whose flags are all placed opens its other neighbours
 - 💥 **Honest endings**: a loss reveals every mine and crosses wrong flags; a win flags the remaining mines
 - ⏱️ **Time attack feedback**: a mine flashes the frame and shows **−15 s**, a cleared board shows **+150**, and a fresh board follows at once
 - 👁️ **Colour-blind friendly**: numbers are digits, closed cells have a raised inner edge, the opened mine has a burst, wrong flags a cross; colour is never the only cue
-- 📱 **Phone-friendly**: the expert boards (square and hex) turn to portrait (16×30, 14×24) on a portrait phone; long-press flags
+- 📱 **Phone-friendly**: tap opens, a long press flags, and a **Flag** button switches a tap to flagging; the board sizes itself
+  from its frame, and a board too big for the screen pans inside that frame, never the page; the expert boards (square and hex)
+  turn to portrait (16×30, 14×24) on a portrait phone
+- 📖 **Rules** button: goal (with a diagram of a numbered cell), how to play, the rules, scoring with every number, dental mode and, on phones, the touch controls
+- 🏁 **Finish early**: ends the run after a confirm; a classic or hexagonal board ranks 0, a time attack ranks the points so far
+- ⛶ **Full screen**: the game fills the screen (on iPhone a full-screen layout; Share → Add to Home Screen hides the browser bars)
 - 🏆 **Unified arcade scoring**: a finished run is recorded once; Best, plays and wins are shared with the portal
 - ⏸️ **Pause** (P / Esc, or automatically when the tab is hidden) freezes the board and the clock
 - 💾 **Autosave & resume**: the board survives reloads and tab closes
@@ -107,7 +115,8 @@ Production build: `npm run build && npm run preview`. The build uses relative as
 | Input | Action |
 | --- | --- |
 | 🖱️ Click / tap | Open a cell; on a number whose flags are all placed: open its other neighbours (chord) |
-| 🖱️ Right-click / long-press (500 ms) | Flag / unflag |
+| 🖱️ Right-click / long-press (400 ms) | Flag / unflag |
+| 🚩 **Flag** button | While on, a click / tap flags and a long press opens |
 | 🖱️ Double-click a number | Chord |
 | **← → ↑ ↓** | Move the focus ring (follows the screen when the board is rotated) |
 | **Space** / **Enter** | Open (or chord) the focused cell · start · resume · play again |
@@ -116,7 +125,16 @@ Production build: `npm run build && npm run preview`. The build uses relative as
 | **R** | New game (asks first during a run) |
 | **T** | Toggle dark / light theme (standalone page) |
 
-Hotkeys are ignored while you type in a form field or hold Cmd/Ctrl/Alt.
+Hotkeys are ignored while you type in a form field or hold Cmd/Ctrl/Alt. **R** stays *New game*, so the **Rules** dialog opens
+with its button only.
+
+### 📱 On a phone
+
+Tap a cell to open it and hold it for a moment (400 ms) to place or remove a flag; a finger that starts to drag is panning, so it
+neither flags nor opens. The **Flag** button above the board swaps the two: while it is on, a tap flags and a long press opens.
+A tap on a number whose flags are all placed opens the rest around it. On a touch screen a cell stays at least 32 px wide;
+a board that is then bigger than its frame pans inside the frame while the page stays still. **Full screen** in the Game panel
+hides everything but the game, and **Rules** has an *On mobile* section with all of this.
 
 ## 🎯 Scoring & stats
 
@@ -132,8 +150,12 @@ score = round(base × clamp(par / max(seconds, 1), 0.1, 1))
 | Intermediate | 3 000 | 120 s |
 | Expert | 6 000 | 300 s |
 
-Time attack: **150 points per cleared board**, capped at 12 000, recorded with outcome `over`. The arcade-wide score cap for
-Minesweeper is 12 000 (a classic run tops out at 6 000).
+Time attack: **150 points per cleared board**, capped at 12 000, recorded with outcome `over`.
+
+**Finish** ends a run early after an in-page confirm (outcome `finished`): a classic or hexagonal board then ranks 0, a time
+attack ranks the points it has so far. The result card says *Finished early* and the save is dropped.
+
+The arcade-wide score cap for Minesweeper is 12 000 (a classic run tops out at 6 000).
 
 The stat strip shows **Score**, **Best**, **Mines** left (mines − flags) and **Time**; in time attack **Boards** and **Time left**.
 Every finished run is recorded by the kit under `arcade.stats.minesweeper` (`best`, `plays`, `wins`, `totalScore`, `totalSeconds`, …).
@@ -154,7 +176,7 @@ import { MinesweeperGame, MinesweeperDemo } from '@arcade/minesweeper';
 
 <MinesweeperGame
   embedded                                   // hide the page title; the portal shows it
-  onGameOver={(score) => submitScore('minesweeper', score)}  // finished runs with points > 0
+  onGameOver={(score, info) => submitScore('minesweeper', score, info)}  // runs with points > 0, and every Finish ({ finished: true }, even at 0)
   onRunEnd={(run) => console.log(run.outcome, run.score)}    // every finished run
   onStatusChange={({ status, score, seconds }) => updateHeader(status, seconds)}
 />
@@ -163,7 +185,7 @@ import { MinesweeperGame, MinesweeperDemo } from '@arcade/minesweeper';
 
 Both components follow the shared `ArcadeGameProps` / `ArcadeDemoProps` contract from `src/arcade/types.ts`.
 Status mapping: `idle` before the first run of a visit (Start card), `running` while a board is played, `paused` while suspended
-(or restored, or while the in-page confirmation is open), `gameOver` once the run has a result.
+(or restored, or while the in-page confirmation or the Rules dialog is open), `gameOver` once the run has a result.
 
 ## 🧪 Scripts
 
@@ -192,7 +214,8 @@ src/
     focus.ts              arrow-key focus in screen space
     autopilot.ts          the demo's logic player (sure moves, then lowest risk)
     rng.ts seed.ts        mulberry32, fresh seeds
-  components/             Board (SVG square + hex), ModeSelect, DentalToggle
+  components/             Board (SVG square + hex, long press), ModeSelect, DentalToggle
+  rules.tsx               Rules dialog sections and the number diagram (numbers from the scoring helpers)
   demo/MinesweeperDemo.tsx  landing-page attract mode
   MinesweeperGame.tsx     the embeddable game (ArcadeGameProps)
   i18n.ts                 en / hu / de strings

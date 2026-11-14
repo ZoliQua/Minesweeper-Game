@@ -6,6 +6,30 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-14
+
+### Added
+- **Rules** dialog (kit `RulesButton`): goal with a diagram of a „2” and its two neighbouring mines (follows dental mode),
+  how to play (mouse and keys, or touch on a touch screen), the rules with every board size, scoring with every number
+  computed from the scoring helpers, dental mode and, on touch screens, an *On mobile* section. Opening it pauses a live run.
+  **R** stays *New game*, so the dialog opens with its button only.
+- **Finish early** (kit `FinishButton`) once a run has started: an in-page confirm shows the Score value; a classic or hexagonal
+  board ranks 0, a time attack ranks its points so far (`onGameOver(score, { finished: true })`, outcome `finished`); the result
+  card says *Finished early* and the save is dropped. The clocks stand still while the confirm is open.
+- Touch controls: tap opens (or chords a satisfied number), a long press (kit `useLongPress`, 400 ms) flags, a drag pans; a
+  visible **Flag** / „Zászló” / „Fahne” toggle above the board makes a tap flag and a long press open. Touch help in the
+  Controls panel.
+- Full screen (kit `FullscreenButton` / `useImmersive`); in the CSS full-screen mode Escape may pause but never resumes.
+- The board sizes itself from its frame (at most 40 px per cell, short enough for the visible height); on touch screens a cell
+  stays at least 32 px wide and a bigger board pans inside its frame, never the page.
+- `README.de.md` and `README.hu.md`: full German and Hungarian translations; the family table lists Snapszer.
+
+### Changed
+- Long press is 400 ms (was 500 ms) and comes from the kit: it vibrates, swallows the click after the release and gives up
+  when the finger drifts. A held mouse button stays a plain click.
+- The time-attack hints take the clock and the penalty from the game constants instead of fixed text.
+- `index.html` viewport has `viewport-fit=cover` for the iPhone safe areas.
+
 ## [1.0.0] - 2026-11-11
 
 ### Added
