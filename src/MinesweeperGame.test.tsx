@@ -59,13 +59,13 @@ describe('<MinesweeperGame />', () => {
     expect(stateOf(container, hidden)).toBe('hidden');
   });
 
-  it('a long press (500 ms) flags on touch screens without opening the cell', () => {
+  it('a long press (400 ms) flags on touch screens without opening the cell', () => {
     const { container } = start();
     act(() => fireEvent.click(cell(container, 40)));
     const hidden = beginner().cells.findIndex((c) => !c.open);
     const el = cell(container, hidden);
     act(() => fireEvent.pointerDown(el, { pointerType: 'touch' }));
-    act(() => vi.advanceTimersByTime(520));
+    act(() => vi.advanceTimersByTime(420));
     act(() => fireEvent.pointerUp(el, { pointerType: 'touch' }));
     act(() => fireEvent.click(el));
     expect(stateOf(container, hidden)).toBe('flag');

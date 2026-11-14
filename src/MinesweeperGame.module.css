@@ -10,7 +10,47 @@
   justify-content: center;
 }
 
+.boardCol {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.boardBar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.flagToggle {
+  min-height: 44px;
+  min-width: 112px;
+  gap: 6px;
+}
+
+.flagToggle[aria-pressed='true'] {
+  border-color: var(--game-color, var(--accent));
+  box-shadow: inset 0 0 0 2px var(--game-color, var(--accent));
+  font-weight: 800;
+}
+
+.flagCheck {
+  display: inline-block;
+  width: 1em;
+  font-weight: 900;
+}
+
+/*
+ * Board size comes from its frame: as wide as the frame allows (at most 40 px per cell) and short
+ * enough to fit the visible height. On touch screens a cell never gets smaller than 32 px; a board
+ * that is then bigger than its frame pans inside the frame (overflow), never the page.
+ */
 .boardWrap {
+  --ms-frame-h: max(240px, calc(100vh - 220px));
+  --ms-frame-h: max(240px, calc(100dvh - 220px));
+  --ms-cell-min: 0px;
+  --ms-cell-max: 40px;
   position: relative;
   width: 100%;
   min-width: 0;
@@ -18,9 +58,29 @@
   border-radius: var(--radius-lg);
 }
 
+.frame {
+  width: 100%;
+  max-height: var(--ms-frame-h);
+  /* A visible edge: a board bigger than its frame is clearly cut off there and pans inside. */
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .boardInner {
   margin: 0 auto;
-  width: 100%;
+  width: max(
+    calc(var(--ms-cells) * var(--ms-cell-min)),
+    min(100%, calc(var(--ms-cells) * var(--ms-cell-max)), calc((var(--ms-frame-h) - 4px) * var(--ms-aspect)))
+  );
+}
+
+@media (pointer: coarse) {
+  .boardWrap {
+    --ms-cell-min: 32px;
+  }
 }
 
 /* Time attack: a mine hit flashes the frame (shape: a thick dashed outline, not only a colour). */
@@ -109,6 +169,13 @@
   flex: 1;
 }
 
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .save {
   margin-top: 10px;
   min-height: 16px;
@@ -141,5 +208,7 @@
 @media (max-width: 520px) {
   .boardWrap {
     padding: 6px;
+    --ms-frame-h: max(240px, calc(100vh - 200px));
+    --ms-frame-h: max(240px, calc(100dvh - 200px));
   }
 }

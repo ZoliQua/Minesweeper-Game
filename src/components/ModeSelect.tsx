@@ -1,6 +1,7 @@
-import { useMessages } from '../arcade';
+import { formatNumber, useLang, useMessages } from '../arcade';
 import { LEVEL_KEY, MESSAGES, type MessageKey } from '../i18n';
 import { LEVELS, type Level, type ModeKind, type ModeSelection } from '../logic/modes';
+import { TIME_ATTACK_MS } from '../logic/timeAttack';
 
 export type ModeSelectProps = {
   mode: ModeSelection;
@@ -18,6 +19,8 @@ const KINDS: ReadonlyArray<{ id: ModeKind; label: MessageKey; hint: MessageKey }
 /** Mode (Classic / Hexagonal / Time attack) and, for the first two, the level. */
 export const ModeSelect = ({ mode, lastLevel, onChange }: ModeSelectProps) => {
   const t = useMessages(MESSAGES);
+  const [lang] = useLang();
+  const min = formatNumber(TIME_ATTACK_MS / 60_000, lang);
   return (
     <div style={{ display: 'grid', gap: 8 }}>
       <div className="arc-segmented arc-segmented--full" role="group" aria-label={t('modeGroup')}>
@@ -26,7 +29,7 @@ export const ModeSelect = ({ mode, lastLevel, onChange }: ModeSelectProps) => {
             type="button"
             key={id}
             aria-pressed={id === mode.kind}
-            title={t(hint)}
+            title={t(hint, { min })}
             onClick={() => onChange({ kind: id, level: id === 'timeAttack' ? 'beginner' : mode.kind === 'timeAttack' ? (lastLevel ?? 'beginner') : mode.level })}
           >
             {t(label)}

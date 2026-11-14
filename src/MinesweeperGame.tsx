@@ -2,18 +2,24 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import {
   ARCADE_KEYS,
   clearSession,
+  FinishButton,
   formatClock,
   formatNumber,
+  FullscreenButton,
   gameName,
   GameOverlay,
   isKey,
   KeyHelp,
   readJSON,
+  Toothbrush,
+  RulesButton,
   SaveBadge,
   shouldIgnoreKey,
   StatPanel,
+  TouchHelp,
   useArcadeRun,
   useDental,
+  useImmersive,
   useKitMessages,
   useLang,
   useMessages,
@@ -26,7 +32,7 @@ import {
   type OverlayAction,
   type RunOutcome,
 } from './arcade';
-import { Board } from './components/Board';
+import { Board, boardSize, CELL_UNITS } from './components/Board';
 import { DentalToggle } from './components/DentalToggle';
 import type { CellView } from './components/cellView';
 import { ModeSelect } from './components/ModeSelect';
@@ -36,6 +42,7 @@ import { moveFocus, type Direction } from './logic/focus';
 import { displayDims, LEVELS, MODE_KINDS, modeDims, modeTopology, type Level, type ModeSelection } from './logic/modes';
 import { classicScore } from './logic/scoring';
 import { randomSeed } from './logic/seed';
+import { useRulesSections } from './rules';
 import { isMinesweeperSession, restoreTimeAttack, SESSION_SCHEMA, toSession, type MinesweeperSession } from './logic/session';
 import {
   isTimeUp,
@@ -128,6 +135,8 @@ const centreOf = (mode: ModeSelection) => {
   return Math.floor(rows / 2) * cols + Math.floor(cols / 2);
 };
 
+const fmt = (n: number) => Number(n.toFixed(3));
+
 const sameMode = (a: ModeSelection, b: ModeSelection) => a.kind === b.kind && a.level === b.level;
 
 /** True on a portrait phone: the expert boards are then shown rotated. */
@@ -198,6 +207,13 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
   const [focus, setFocus] = useState(() => centreOf(init.mode));
   const [showFocus, setShowFocus] = useState(false);
   const feedbackSeq = useRef(0);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const immersive = useImmersive(rootRef);
+  const rulesSections = useRulesSections();
+  // The Finish confirm is open: board and clocks stand still without leaving the run.
+  const [finishOpen, setFinishOpen] = useState(false);
+  // Flag mode (the visible toggle for touch screens): a tap flags, a long press opens.
+  const [flagMode, setFlagMode] = useState(false);
 
   const isTA = mode.kind === 'timeAttack';
   const dims = modeDims(mode);
@@ -205,7 +221,7 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
   const swapped = shown.cols !== dims.cols;
   const board = play.board;
 
-  const interactive = phase === 'live' && pending === null;
+  const interactive = phase === 'live' && pending === null && !finishOpen;
   const inProgress = (phase === 'live' || phase === 'paused') && (isTA || board.generated);
   // Classic and hex clocks start with the first open, like the original.
   const clockRunning = interactive && (isTA || board.generated);
@@ -311,6 +327,21 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
     setPhase((p) => (p === 'live' ? 'paused' : p === 'paused' ? 'live' : p));
   }, [pending]);
 
+  /** Finish early: classic and hex rank 0 (only a cleared board scores), time attack ranks its points so far. */
+  const finishEarly = useCallback(() => {
+    setWelcomeBack(false);
+    setPending(null);
+    setFeedback(null);
+    finish('finished', isTA ? timeAttackScore(play) : 0);
+    // Nothing to reveal: the card comes at once.
+    setShowResult(true);
+  }, [finish, isTA, play]);
+
+  // Opening the rules pauses a live run; closing them leaves it paused.
+  const onRulesOpen = useCallback((open: boolean) => {
+    if (open) setPhase((p) => (p === 'live' ? 'paused' : p));
+  }, []);
+
   const discardSave = useCallback(() => {
     clearSession(GAME);
     resetTo(mode, 'idle');
@@ -396,8 +427,9 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
     else act(focus, 'open');
   }, [phase, newRun, togglePause, act, focus]);
 
-  const api = useRef({ act, primary, togglePause, requestNew, confirmPending, cancelPending, pending, interactive, focus, dims, swapped });
-  api.current = { act, primary, togglePause, requestNew, confirmPending, cancelPending, pending, interactive, focus, dims, swapped };
+  const fullscreen = immersive.active;
+  const api = useRef({ act, primary, togglePause, requestNew, confirmPending, cancelPending, pending, interactive, focus, dims, swapped, phase, flagMode, board, fullscreen });
+  api.current = { act, primary, togglePause, requestNew, confirmPending, cancelPending, pending, interactive, focus, dims, swapped, phase, flagMode, board, fullscreen };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -435,6 +467,8 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
         a.act(a.focus, 'flag');
       } else if (isKey(e, ARCADE_KEYS.pause)) {
         e.preventDefault();
+        // In the CSS full-screen mode Escape also leaves full screen: it may pause, never resume.
+        if (e.key === 'Escape' && a.fullscreen && a.phase !== 'live') return;
         a.togglePause();
       } else if (isKey(e, ARCADE_KEYS.restart)) {
         a.requestNew();
@@ -445,7 +479,13 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
   }, []);
 
   // Stable board callbacks, so the memoised board only redraws when the cells change.
-  const onOpen = useCallback((i: number) => api.current.act(i, 'open'), []);
+  const onOpen = useCallback((i: number) => {
+    const a = api.current;
+    // Flag mode: a tap flags a closed cell; on an open number it still chords.
+    if (a.flagMode && !a.board.cells[i]?.open) a.act(i, 'flag');
+    else a.act(i, 'open');
+  }, []);
+  const onLongPress = useCallback((i: number) => api.current.act(i, api.current.flagMode ? 'open' : 'flag'), []);
   const onFlag = useCallback((i: number) => api.current.act(i, 'flag'), []);
   const onChord = useCallback((i: number) => api.current.act(i, 'chord'), []);
   const onPointer = useCallback(() => setShowFocus(false), []);
@@ -468,6 +508,7 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
   const newBest = result !== null && result.score > 0 && result.score > stats.bestBeforeRun;
   const modeName = isTA ? t('modeTimeAttack') : `${t(KIND_KEY[mode.kind])} · ${t(LEVEL_KEY[mode.level])}`;
   const remainingSec = Math.ceil(play.remainingMs / 1000);
+  const size = boardSize(board, swapped);
   const dentalKey = (plain: MessageKey, tooth: MessageKey) => (dental ? tooth : plain);
 
   const statItems = isTA
@@ -489,6 +530,7 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
     [t, dental],
   );
 
+  const taVars = { min: num(TIME_ATTACK_MS / 60_000), s: num(MINE_PENALTY_MS / 1000) };
   let overlay: { title: string; message: string; actions: OverlayAction[] } | null = null;
   if (pending) {
     overlay = {
@@ -502,7 +544,7 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
   } else if (phase === 'idle') {
     overlay = {
       title: gameName(GAME, lang),
-      message: isTA ? t(dentalKey('idleTa', 'idleTaDental')) : t(dentalKey('idleBody', 'idleBodyDental')),
+      message: isTA ? t(dentalKey('idleTa', 'idleTaDental'), taVars) : t(dentalKey('idleBody', 'idleBodyDental')),
       actions: [{ label: k('start'), onClick: newRun, primary: true, kbd: 'Space' }],
     };
   } else if (phase === 'paused') {
@@ -528,7 +570,15 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
       { label: t('playAgain'), onClick: newRun, primary: true, kbd: 'Space' },
       { label: t('viewBoard'), onClick: () => setHideResult(true) },
     ];
-    if (result.outcome === 'win') {
+    if (result.outcome === 'finished') {
+      overlay = {
+        title: k('finishedEarly'),
+        message: isTA
+          ? t('taBody', { boards: num(play.solved), score: num(result.score), best: num(best) }) + (newBest ? t('winNewBest') : '')
+          : t('finishedClassic', { score: num(result.score), best: num(best) }),
+        actions,
+      };
+    } else if (result.outcome === 'win') {
       overlay = {
         title: t('winTitle'),
         message:
@@ -554,11 +604,11 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
   }
 
   const modeNote = isTA
-    ? t(dentalKey('taNote', 'taNoteDental'), { points: num(POINTS_PER_BOARD), s: num(MINE_PENALTY_MS / 1000) })
+    ? t(dentalKey('taNote', 'taNoteDental'), { points: num(POINTS_PER_BOARD), ...taVars })
     : t(dentalKey('levelNote', 'levelNoteDental'), { cols: num(dims.cols), rows: num(dims.rows), mines: num(dims.mines) });
 
   return (
-    <div className={`arc-game ${styles.game}`} style={{ '--game-color': 'var(--game-minesweeper)' } as CSSProperties}>
+    <div ref={rootRef} className={`arc-game ${styles.game}`} style={{ '--game-color': 'var(--game-minesweeper)' } as CSSProperties}>
       {!embedded && (
         <header className="arc-game__head">
           <div>
@@ -571,36 +621,67 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
       <StatPanel status={status} items={statItems} />
 
       <div className={styles.layout}>
-        <div className={`arc-game__board ${styles.boardWrap}`} data-flash={feedback?.kind}>
-          <div className={styles.boardInner} style={{ maxWidth: `${shown.cols * 40}px` }}>
-            <Board
-              board={board}
-              dental={dental}
-              swapped={swapped}
-              focus={focus}
-              showFocus={showFocus && interactive}
-              label={t('boardLabel', { cols: num(shown.cols), rows: num(shown.rows) })}
-              describe={describe}
-              interactive={interactive}
-              onOpen={onOpen}
-              onFlag={onFlag}
-              onChord={onChord}
-              onPointer={onPointer}
-            />
-          </div>
-          {feedback && (
-            <div
-              key={feedback.n}
-              className={`${styles.toast} ${feedback.kind === 'mine' ? styles.toastMine : styles.toastSolved}`}
-              data-testid={feedback.kind === 'mine' ? 'ms-penalty' : 'ms-bonus'}
-              aria-live="polite"
+        <div className={styles.boardCol}>
+          <div className={styles.boardBar}>
+            <button
+              type="button"
+              className={`arc-btn ${styles.flagToggle}`}
+              aria-pressed={flagMode}
+              onClick={() => setFlagMode((on) => !on)}
             >
-              {feedback.kind === 'mine'
-                ? t('penalty', { s: num(MINE_PENALTY_MS / 1000) })
-                : t('bonus', { points: num(POINTS_PER_BOARD) })}
+              {dental ? (
+                <Toothbrush size={18} />
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M6 21V4" />
+                  <path d="M6 4l11 4-11 5" />
+                  <path d="M3 21h7" />
+                </svg>
+              )}
+              <span>{t('flagMode')}</span>
+              {/* The on state is a check mark and a pressed frame, not only a colour. */}
+              <span className={styles.flagCheck} aria-hidden="true">
+                {flagMode ? '✓' : ''}
+              </span>
+            </button>
+          </div>
+          <div className={`arc-game__board ${styles.boardWrap}`} data-flash={feedback?.kind}>
+            <div className={`arc-board-tap ${styles.frame}`} data-testid="ms-frame">
+              <div
+                className={styles.boardInner}
+                style={{ '--ms-cells': fmt(size.width / CELL_UNITS), '--ms-aspect': fmt(size.width / size.height) } as CSSProperties}
+              >
+                <Board
+                  board={board}
+                  dental={dental}
+                  swapped={swapped}
+                  focus={focus}
+                  showFocus={showFocus && interactive}
+                  label={t('boardLabel', { cols: num(shown.cols), rows: num(shown.rows) })}
+                  describe={describe}
+                  interactive={interactive}
+                  onOpen={onOpen}
+                  onFlag={onFlag}
+                  onChord={onChord}
+                  onLongPress={onLongPress}
+                  onPointer={onPointer}
+                />
+              </div>
             </div>
-          )}
-          {overlay && <GameOverlay {...overlay} />}
+            {feedback && (
+              <div
+                key={feedback.n}
+                className={`${styles.toast} ${feedback.kind === 'mine' ? styles.toastMine : styles.toastSolved}`}
+                data-testid={feedback.kind === 'mine' ? 'ms-penalty' : 'ms-bonus'}
+                aria-live="polite"
+              >
+                {feedback.kind === 'mine'
+                  ? t('penalty', { s: num(MINE_PENALTY_MS / 1000) })
+                  : t('bonus', { points: num(POINTS_PER_BOARD) })}
+              </div>
+            )}
+            {overlay && <GameOverlay {...overlay} />}
+          </div>
         </div>
 
         <aside className={styles.side}>
@@ -618,6 +699,11 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
               <button type="button" className="arc-btn" onClick={requestNew} disabled={phase === 'idle' || pending !== null}>
                 {k('newGame')}
               </button>
+            </div>
+            <div className={styles.tools}>
+              <RulesButton sections={rulesSections} gameId={GAME} onOpenChange={onRulesOpen} hotkey={false} />
+              <FinishButton score={score} visible={inProgress} onFinish={finishEarly} onOpenChange={setFinishOpen} />
+              <FullscreenButton immersive={immersive} />
             </div>
             <div className={styles.save}>
               <SaveBadge savedAt={phase === 'live' || phase === 'paused' ? savedAt : null} onDiscard={discardSave} />
@@ -641,6 +727,14 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
           <section className="arc-panel">
             <h2 className="arc-panel__title">{t('panelKeys')}</h2>
             <KeyHelp rows={keyRows} />
+            <TouchHelp
+              rows={[
+                [t('touchTap'), t('touchTapAction')],
+                [t('touchHold'), t('touchHoldAction')],
+                [t('touchFlagMode'), t('touchFlagModeAction')],
+                [t('touchDrag'), t('touchDragAction')],
+              ]}
+            />
           </section>
         </aside>
       </div>

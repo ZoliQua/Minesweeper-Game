@@ -1,12 +1,12 @@
 import { memo, useId, useRef, type MouseEvent, type PointerEvent } from 'react';
-import { DecayedTooth, Toothbrush } from '../arcade';
+import { DecayedTooth, Toothbrush, useLongPress } from '../arcade';
 import { isSolved } from '../logic/board';
 import type { Board as BoardState, Cell } from '../logic/types';
 import { cellView, type CellView } from './cellView';
 import styles from './Board.module.css';
 
-/** Long-press time that places a flag on touch screens. */
-const LONG_PRESS_MS = 500;
+/** Long-press time that places a flag on touch screens (the kit's default). */
+export const LONG_PRESS_MS = 400;
 
 const SQ = 20; // square cell size (viewBox units)
 const R = 11.5; // hex radius (centre to corner), pointy-top
@@ -27,7 +27,17 @@ const fmt = (n: number) => Number(n.toFixed(2));
 const polygon = (pts: [number, number][], swapped: boolean) =>
   pts.map(([x, y]) => (swapped ? `${fmt(y)},${fmt(x)}` : `${fmt(x)},${fmt(y)}`)).join(' ');
 
-function geometry(board: BoardState, swapped: boolean): Geometry {
+/** Drawn size of a board in viewBox units (a square cell is 20 units wide). */
+// eslint-disable-next-line react-refresh/only-export-components -- the layout size comes from the same geometry as the drawing
+export function boardSize(board: Pick<BoardState, 'cols' | 'rows' | 'topology'>, swapped: boolean): { width: number; height: number } {
+  const { width, height } = geometry(board, swapped);
+  return { width: width + 2, height: height + 2 };
+}
+
+/** Width of one square cell in viewBox units. */
+export const CELL_UNITS = SQ;
+
+function geometry(board: Pick<BoardState, 'cols' | 'rows' | 'topology'>, swapped: boolean): Geometry {
   const { cols, rows, topology } = board;
   let w: number;
   let h: number;
@@ -76,7 +86,7 @@ function geometry(board: BoardState, swapped: boolean): Geometry {
 }
 
 /** Classic mine: a round body with spikes and a highlight. */
-function MineIcon({ s }: { s: number }) {
+export function MineIcon({ s }: { s: number }) {
   const spikes = [0, 45, 90, 135].map((a) => {
     const rad = (a * Math.PI) / 180;
     const l = s * 0.42;
@@ -104,7 +114,7 @@ function FlagIcon({ s }: { s: number }) {
   );
 }
 
-function Icon({ kind, dental, s }: { kind: 'mine' | 'flag'; dental: boolean; s: number }) {
+export function Icon({ kind, dental, s }: { kind: 'mine' | 'flag'; dental: boolean; s: number }) {
   if (!dental) return kind === 'mine' ? <MineIcon s={s} /> : <FlagIcon s={s} />;
   const size = s * 0.95;
   return (
@@ -141,6 +151,8 @@ export type BoardProps = {
   onOpen?: (index: number) => void;
   onFlag?: (index: number) => void;
   onChord?: (index: number) => void;
+  /** Touch / pen long press (default: `onFlag`). */
+  onLongPress?: (index: number) => void;
   /** Any pointer input on the board (hides the keyboard ring). */
   onPointer?: () => void;
 };
@@ -157,7 +169,7 @@ function indexOf(target: EventTarget | null): number | null {
  * pointy-top; rotated it becomes odd-q flat-top, which keeps the neighbours
  * where the eye expects them). Numbers are digits; colour is only extra.
  * Pointer input is delegated: click opens (or chords an open number),
- * right-click / long-press flags, double-click chords.
+ * right-click / long-press (touch, pen) flags, double-click chords.
  */
 function BoardView({
   board,
@@ -172,12 +184,23 @@ function BoardView({
   onOpen,
   onFlag,
   onChord,
+  onLongPress,
   onPointer,
 }: BoardProps) {
   const uid = useId();
   const geo = geometry(board, swapped);
   const won = isSolved(board);
-  const press = useRef<{ i: number; timer: number | null; fired: boolean; touch: boolean } | null>(null);
+  /** The last press: Android's contextmenu after a touch long press must not flag a second time. */
+  const press = useRef<{ i: number; touch: boolean } | null>(null);
+  // The kit's long press: vibrates, swallows the click after the release, and gives up when the finger
+  // drifts (a pan of the board frame) or the browser cancels the pointer (it took the gesture to scroll).
+  const longPress = useLongPress(
+    (e) => {
+      const i = indexOf(e.target);
+      if (i !== null) (onLongPress ?? onFlag)?.(i);
+    },
+    { ms: LONG_PRESS_MS },
+  );
   /** Whether the cell was already open at the first click of a double-click. */
   const openAtFirstClick = useRef<{ i: number; open: boolean } | null>(null);
   /** Cell of the previous click: a click counter above 1 only means a double-click on that same cell. */
@@ -185,44 +208,21 @@ function BoardView({
   const mini = variant === 'mini';
   const cellId = (i: number) => `${uid}-cell-${i}`;
 
-  const clearPress = () => {
-    const p = press.current;
-    if (p?.timer != null) window.clearTimeout(p.timer);
-    if (p) p.timer = null;
-  };
-
   const handlers = interactive
     ? {
         onPointerDown: (e: PointerEvent<SVGSVGElement>) => {
           onPointer?.();
           const i = indexOf(e.target);
-          clearPress();
-          if (i === null) return;
           const touch = e.pointerType !== 'mouse';
-          press.current = { i, timer: null, fired: false, touch };
-          if (!touch) return;
-          press.current.timer = window.setTimeout(() => {
-            if (!press.current) return;
-            press.current.fired = true;
-            press.current.timer = null;
-            try {
-              navigator.vibrate?.(15);
-            } catch {
-              /* ignore */
-            }
-            onFlag?.(i);
-          }, LONG_PRESS_MS);
+          press.current = i === null ? null : { i, touch };
+          // A held mouse button stays a plain click; only touch and pen press long.
+          if (touch && i !== null) longPress.onPointerDown(e);
         },
-        onPointerUp: clearPress,
-        onPointerCancel: clearPress,
-        onPointerLeave: clearPress,
+        onPointerUp: longPress.onPointerUp,
+        onPointerCancel: longPress.onPointerCancel,
+        onPointerLeave: longPress.onPointerLeave,
         onClick: (e: MouseEvent<SVGSVGElement>) => {
           const i = indexOf(e.target);
-          const p = press.current;
-          if (p?.fired) {
-            press.current = null;
-            return;
-          }
           if (i === null) return;
           // Second click of a double-click on the same cell: the double-click handler decides.
           // A fast click on another cell (some browsers still count it) is a normal click.
