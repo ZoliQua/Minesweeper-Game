@@ -12,7 +12,7 @@ All notable changes to this project are documented here. The format follows
 - Engine: square (8 neighbours) and hexagonal (odd-r offset rows, 6 neighbours) boards, seeded mine placement on the first open
   that avoids the clicked cell and its neighbours, flood fill, flags and chording.
 - Modes: Classic (Beginner 9×9 / 10, Intermediate 16×16 / 40, Expert 30×16 / 99), Hexagonal (9×9 / 10, 14×14 / 36, 24×14 / 80)
-  and Time attack (3 minutes of beginner boards, 150 points per cleared board, a mine costs 15 seconds and brings a new board).
+  and Time attack (3 minutes of beginner boards, 150 points per cleared board, capped at 12 000, a mine costs 15 seconds and brings a new board).
 - Scoring: `round(base × clamp(par / max(seconds, 1), 0.1, 1))` with base / par 1000 / 30 s, 3000 / 120 s, 6000 / 300 s; a loss
   scores 0. Runs are recorded once through the arcade kit (`win`, `loss`, or `over` for time attack).
 - SVG board for both topologies: digits for numbers (colour only as a bonus), raised closed cells, a burst on the opened mine,

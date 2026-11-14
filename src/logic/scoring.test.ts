@@ -17,8 +17,8 @@ describe('classicScore', () => {
     expect(classicScore('expert', 600)).toBe(3000);
     expect(classicScore('expert', 100000)).toBe(600);
   });
-  it('max score is 6000', () => {
-    expect(MAX_SCORE).toBe(6000);
-    expect(classicScore('expert', 1)).toBe(MAX_SCORE);
+  it('classic tops out at 6000; the overall cap (time attack) is 12000', () => {
+    expect(MAX_SCORE).toBe(12000);
+    expect(classicScore('expert', 1)).toBe(6000);
   });
 });

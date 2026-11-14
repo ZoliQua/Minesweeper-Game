@@ -1,6 +1,7 @@
 import type { Level } from './modes';
 
-export const MAX_SCORE = 6000;
+/** Overall cap: classic tops out at 6000 (expert), time attack is clamped to 12000. */
+export const MAX_SCORE = 12000;
 
 /** Base points and par seconds per level (hex uses the same table). */
 export const SCORE_TABLE: Record<Level, { base: number; par: number }> = {

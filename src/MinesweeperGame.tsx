@@ -404,6 +404,8 @@ export function MinesweeperGame(props: ArcadeGameProps = {}) {
       if (shouldIgnoreKey(e)) return;
       const a = api.current;
       if (a.pending) {
+        // A focused button ("Keep playing" or "Give up") answers Enter itself.
+        if (e.key === 'Enter' && handlesActivationKeys(e.target)) return;
         if (e.key === 'Enter') {
           e.preventDefault();
           a.confirmPending();

@@ -186,6 +186,34 @@ describe('<MinesweeperGame />', () => {
     expect(confirmSpy).not.toHaveBeenCalled();
   });
 
+  it('Enter on a focused "Keep playing" button keeps the run (does not abandon it)', () => {
+    const { container } = start();
+    act(() => fireEvent.click(cell(container, 40)));
+    const opened = openCount(container);
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Expert' })));
+    const keep = screen.getByRole('button', { name: /Keep playing/ });
+    keep.focus();
+    act(() => {
+      fireEvent.keyDown(keep, { key: 'Enter' });
+    });
+    expect(board().getAttribute('data-cols')).toBe('9');
+    expect(openCount(container)).toBe(opened);
+    // The browser then activates the focused button itself.
+    act(() => fireEvent.click(keep));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(board().getAttribute('data-cols')).toBe('9');
+    expect(openCount(container)).toBe(opened);
+    // Escape still cancels while a button has focus.
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Expert' })));
+    const keep2 = screen.getByRole('button', { name: /Keep playing/ });
+    keep2.focus();
+    act(() => {
+      fireEvent.keyDown(keep2, { key: 'Escape' });
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(board().getAttribute('data-cols')).toBe('9');
+  });
+
   it('time attack: a mine costs 15 s with visible feedback, a cleared board scores 150', () => {
     const onRunEnd = vi.fn();
     const { container } = render(<MinesweeperGame onRunEnd={onRunEnd} />);

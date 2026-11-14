@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createBoard, neighbours, openCell } from './board';
+import { MAX_SCORE } from './scoring';
 import { TIME_ATTACK_MS, startTimeAttack, taChord, taFlag, taOpen, tick, timeAttackScore, type TimeAttackState } from './timeAttack';
 import type { Board } from './types';
 
@@ -54,6 +55,12 @@ describe('time attack', () => {
     expect(timeAttackScore(s)).toBe(150);
     expect(s.board.generated).toBe(false);
     expect(s.remainingMs).toBe(TIME_ATTACK_MS);
+  });
+  it('the time-attack score is capped at MAX_SCORE (12000)', () => {
+    expect(timeAttackScore({ solved: 79 })).toBe(11850);
+    expect(timeAttackScore({ solved: 80 })).toBe(12000);
+    expect(timeAttackScore({ solved: 100 })).toBe(12000);
+    expect(timeAttackScore({ solved: 10000 })).toBe(MAX_SCORE);
   });
   it('real generated board can be solved via opening all safe cells', () => {
     let s = startTimeAttack(3);

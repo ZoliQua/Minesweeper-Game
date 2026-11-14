@@ -32,18 +32,28 @@ describe('Minesweeper i18n', () => {
     expect(screen.getByRole('dialog', { name: 'Minesweeper' }).textContent).toMatch(/Der erste Klick ist immer sicher/);
     expect(screen.getByRole('button', { name: 'Klassisch' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'Sechseckig' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Zeitangriff' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Gegen die Uhr' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Anfänger' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: 'Fortgeschritten' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Experte' })).toBeTruthy();
     expect(screen.getByRole('group', { name: /^Minenfeld/ })).toBeTruthy();
   });
 
+  it('German says Spielfelder for whole boards and Felder only for cells', () => {
+    const de = MESSAGES.de;
+    expect(de.modeTimeAttack).toBe('Gegen die Uhr');
+    expect(de.statBoards).toBe('Spielfelder');
+    expect(de.taBody).toMatch(/^\{boards\} Spielfelder geräumt/);
+    expect(de.taNote).toMatch(/Spielfeld/);
+    expect(de.levelNote).toMatch(/Spielfeld/);
+    expect(MESSAGES.hu.modeHex).toBe('Hatszögletű');
+  });
+
   it('uses the Hungarian game, mode and level names', () => {
     applyLang('hu');
     render(<MinesweeperGame />);
     expect(screen.getByRole('dialog', { name: 'Aknakereső' })).toBeTruthy();
-    for (const name of ['Klasszikus', 'Hatszöges', 'Időre', 'Kezdő', 'Haladó', 'Mester']) {
+    for (const name of ['Klasszikus', 'Hatszögletű', 'Időre', 'Kezdő', 'Haladó', 'Mester']) {
       expect(screen.getByRole('button', { name })).toBeTruthy();
     }
   });

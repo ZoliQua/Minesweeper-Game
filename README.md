@@ -132,7 +132,8 @@ score = round(base × clamp(par / max(seconds, 1), 0.1, 1))
 | Intermediate | 3 000 | 120 s |
 | Expert | 6 000 | 300 s |
 
-Time attack: **150 points per cleared board**, recorded with outcome `over`. The arcade-wide score cap for Minesweeper is 6 000.
+Time attack: **150 points per cleared board**, capped at 12 000, recorded with outcome `over`. The arcade-wide score cap for
+Minesweeper is 12 000 (a classic run tops out at 6 000).
 
 The stat strip shows **Score**, **Best**, **Mines** left (mines − flags) and **Time**; in time attack **Boards** and **Time left**.
 Every finished run is recorded by the kit under `arcade.stats.minesweeper` (`best`, `plays`, `wins`, `totalScore`, `totalSeconds`, …).

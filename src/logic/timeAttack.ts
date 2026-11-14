@@ -1,5 +1,6 @@
 import { chord, createBoard, isSolved, openCell, toggleFlag } from './board';
 import { MODES } from './modes';
+import { MAX_SCORE } from './scoring';
 import type { Board } from './types';
 
 export const TIME_ATTACK_MS = 180_000;
@@ -25,7 +26,8 @@ export function startTimeAttack(seed: number, remainingMs: number = TIME_ATTACK_
 }
 
 export const isTimeUp = (s: TimeAttackState) => s.remainingMs <= 0;
-export const timeAttackScore = (s: Pick<TimeAttackState, 'solved'>) => POINTS_PER_BOARD * s.solved;
+export const timeAttackScore = (s: Pick<TimeAttackState, 'solved'>) =>
+  Math.min(MAX_SCORE, POINTS_PER_BOARD * s.solved);
 
 /** Advance the clock; never below 0. */
 export function tick(s: TimeAttackState, elapsedMs: number): TimeAttackState {
